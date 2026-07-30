@@ -22,6 +22,13 @@ The portfolio MUST provide a visible fallback when WebGL is unavailable.
 - Then the scene panel displays a static fallback message
 - And the same portfolio facts remain visible in semantic HTML
 
+#### Scenario: WebGL initialization fails or context is lost
+
+- Given WebGL was detected but Canvas initialization fails or the browser emits `webglcontextlost`
+- When the scene can no longer render
+- Then the scene panel switches to a visible static fallback
+- And the profile remains usable without reloading the page
+
 ### Requirement: Reduced Motion Support
 
 The portfolio MUST respect reduced-motion preferences where feasible.

@@ -10,3 +10,7 @@
 - [x] Update tests for visible content and fallback behavior.
 - [x] Update README with setup, architecture, implementation notes, and quality guidance.
 - [x] Run install, lint, typecheck, tests, build, and OpenSpec validation where available.
+- [x] Verify React, React Three Fiber, Drei, Three.js, Vite, and TypeScript compatibility against current package metadata.
+- [x] Remove external 3D font loading and handle Canvas initialization errors and WebGL context loss.
+- [x] Add a non-root multi-stage Docker image, nginx SPA fallback, `/healthz`, security headers, and Compose web service.
+- [x] Document npm ci, npm audit, Docker verification, runtime behavior, and known browser-only checks.

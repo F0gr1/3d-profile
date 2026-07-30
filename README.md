@@ -1,127 +1,103 @@
 # F0gr1 Interactive 3D Profile
 
-A portfolio-grade interactive 3D profile for **F0gr1 / Ishigami Yuki**. The app keeps the original idea of a WebGL profile scene, but the profile is now readable as normal HTML, testable in jsdom, and built with a modern Vite + React + TypeScript toolchain.
+A Vite + React + TypeScript portfolio for **F0gr1 / Ishigami Yuki**. The 3D scene is progressive enhancement: the profile facts are always available as semantic HTML, including when WebGL is unavailable.
 
-## What This App Shows
+## Quick Start
 
-- A React Three Fiber scene with a central profile object, skill markers, orbit controls, and subtle motion.
-- Semantic profile content for Ishigami Yuki / F0gr1 using public GitHub-visible information only.
-- A readable DOM overlay and detail sections for accessibility, SEO, and non-WebGL environments.
-- WebGL fallback behavior for browsers or test environments that cannot create a WebGL context.
-- Reduced-motion handling that pauses automatic movement when the visitor requests less motion.
-
-## Tech Stack
-
-- React 19
-- TypeScript
-- Vite
-- Vitest + React Testing Library
-- React Three Fiber, Drei, and Three.js
-- ESLint flat config
-- OpenSpec change documentation
-
-## Setup
-
-Runtime requirement:
+Runtime requirements:
 
 - Node.js `20.19+`
 - npm `10+`
 
-Install dependencies:
+Install exactly from the lockfile and start development:
 
 ```bash
-npm install
-```
-
-Start local development:
-
-```bash
+npm ci
 npm run dev
 ```
 
-Preview the production build locally:
+Build and preview the production bundle:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## Quality Gates
+The app does not require environment variables. There is no database, API service, analytics integration, or other required runtime service.
 
-Run these before handing off changes:
+## Docker
+
+The image uses a multi-stage Node build and an unprivileged nginx runtime. The base images use fixed version tags and manifest digests.
 
 ```bash
+docker compose up -d --build
+curl -fsS http://localhost:8080/healthz
+curl -I http://localhost:8080/
+curl -I http://localhost:8080/any/client-side-route
+docker compose down
+```
+
+The runtime serves the SPA on port `8080`, returns `ok` from `/healthz`, applies basic security headers, and falls back unknown paths to `index.html`. Compose intentionally contains only the web service.
+
+## Tech Stack
+
+- React `19.2.x` and React DOM `19.2.x`
+- TypeScript `5.9.x` with strict checking
+- Vite `8.1.x` and `@vitejs/plugin-react` `6.0.x`
+- React Three Fiber `9.6.x`, Drei `10.7.x`, and Three.js `0.185.x`
+- Vitest `4.x` and React Testing Library
+- ESLint 9 flat config
+- Docker multi-stage build with nginx Alpine runtime
+
+## Runtime Behavior
+
+### WebGL Fallback
+
+`src/components/Profile3D.tsx` performs a WebGL capability check before mounting the Canvas. Canvas initialization errors are caught by an error boundary, and `webglcontextlost` switches the scene to the same visible static fallback. The profile content itself remains normal DOM headings, paragraphs, lists, and links.
+
+The 3D layer is decorative and does not render the profile text. This intentionally avoids Drei's external-font loading path, so the app has no CDN font dependency. Skill names and profile identity remain available in HTML.
+
+### Reduced Motion
+
+The app observes `prefers-reduced-motion: reduce`. Reduced motion disables `OrbitControls` auto-rotation and mesh animation, and exposes the active mode in the status UI. CSS transitions and animations are also reduced.
+
+### Public Data
+
+`src/data/profile.ts` contains public GitHub-visible profile and project information only. Placeholder email, LinkedIn, and fake username links are not included.
+
+## Validation
+
+Run the complete local quality gate:
+
+```bash
+npm ci
 npm run lint
 npm run typecheck
 npm run test:run
 npm run build
+npm audit
 ```
 
-What each command protects:
+For the container path, run the Docker commands above and verify both `/healthz` and a non-root SPA deep-link response. A real browser is required to visually confirm active WebGL rendering, orbit controls, and context-loss behavior; jsdom tests cover the HTML and fallback paths.
 
-- `lint`: catches common TypeScript/React mistakes and stale code patterns.
-- `typecheck`: verifies the data contract between profile content and UI rendering.
-- `test:run`: verifies visible profile content, removed placeholder contacts, WebGL fallback, and reduced-motion UI.
-- `build`: confirms Vite can produce the production bundle.
-
-## Architecture
+## Project Structure
 
 ```text
 src/
-  data/profile.ts          Public profile data and TypeScript data contracts
-  components/Profile3D.tsx Semantic page, WebGL detection, reduced-motion hook, 3D scene
+  data/profile.ts          Typed public profile data
+  components/Profile3D.tsx Semantic page, fallback handling, and 3D scene
   App.tsx                  App shell
-  App.css                  Portfolio layout, responsive styling, fallback styling
-  main.tsx                 Vite React entry point
-  setupTests.ts            Vitest + jest-dom setup
-openspec/
-  changes/portfolio-modernization/
-    proposal.md
-    design.md
-    tasks.md
-    specs/*/spec.md
+  App.css                  Responsive portfolio layout
+  index.css                Global styles and reduced-motion CSS
+  App.test.tsx             User-visible behavior tests
+Dockerfile                 Multi-stage build and nginx runtime
+docker-compose.yml         Local web container only
+nginx.conf                 SPA fallback, health endpoint, and headers
+openspec/                  Modernization proposal, design, tasks, and specs
 ```
 
-The most important design choice is that `src/data/profile.ts` owns the content. `Profile3D.tsx` consumes that data and decides how to present it in both DOM and 3D. This keeps updates safer because changing profile facts does not require editing mesh animation code.
+Profile facts should be changed in `src/data/profile.ts` first. Avoid adding private or unverified contact information. The Three.js bundle is intentionally kept in the initial app for this small portfolio; a future performance pass could lazy-load the scene, but that is not required for correctness.
 
-## Implementation Notes
+## Further Notes
 
-For a deeper Japanese walkthrough of the refactor and the next implementation steps, see [`docs/IMPLEMENTATION_NOTES.md`](./docs/IMPLEMENTATION_NOTES.md).
-
-### Canvas Is Progressive Enhancement
-
-The 3D canvas is decorative from an accessibility perspective. The real portfolio information is available in headings, paragraphs, lists, and links. This means the app is still useful when WebGL fails, when tests run in jsdom, or when a visitor uses assistive technology.
-
-### Fallback Behavior
-
-`Profile3D.tsx` checks whether the browser can create a WebGL context. If not, it renders a static scene panel with the same skills and a clear fallback message. The tests intentionally run in an environment without real WebGL, so the fallback path is covered.
-
-### Reduced Motion
-
-The app reads `prefers-reduced-motion: reduce`. When that preference is active, `OrbitControls` stops auto-rotating and `useFrame` animation handlers return early. The UI also shows a visible status chip so the behavior is explainable.
-
-### Public Data Only
-
-The profile uses public GitHub-visible information only: handle, name, role positioning, public focus areas, public skill stack, and public project links. Placeholder email, LinkedIn, and fake username contacts were removed rather than replaced with unverified data.
-
-## Learning Notes for a 3-Year Engineer
-
-This project is intentionally small, but it demonstrates several production habits:
-
-- Keep data separate from rendering. It makes content updates, tests, and future CMS migration easier.
-- Treat WebGL as an enhancement. A portfolio should communicate value even when the expensive visual layer cannot run.
-- Make accessibility part of the component design instead of an afterthought. The DOM is the source of meaning; the canvas is a visual layer.
-- Add explicit quality scripts. A reviewer should not need to guess how to lint, typecheck, test, or build.
-- Test user-visible behavior. These tests do not assert implementation details like mesh positions; they assert that visitors can see the right content and fallback states.
-
-When extending this app, start by editing `src/data/profile.ts`, then adjust the DOM and scene rendering only if the new content needs a new presentation. Avoid adding private facts or contact links unless they are intentionally public and verified.
-
-## OpenSpec
-
-The modernization is documented under:
-
-```text
-openspec/changes/portfolio-modernization/
-```
-
-It contains the proposal, design notes, task list, and delta specs for the interactive profile UI, accessibility/fallback behavior, and quality gates.
+See [`docs/IMPLEMENTATION_NOTES.md`](./docs/IMPLEMENTATION_NOTES.md) for the design rationale and extension notes. The OpenSpec change is under [`openspec/changes/portfolio-modernization/`](./openspec/changes/portfolio-modernization/).

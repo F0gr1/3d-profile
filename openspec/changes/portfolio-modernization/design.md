@@ -13,7 +13,7 @@ The application uses semantic React DOM as the source of truth and treats React 
 
 ## Accessibility and Fallbacks
 
-The canvas is marked as decorative because the DOM contains the profile content in headings, paragraphs, lists, and links. When WebGL is unavailable, the scene area renders a readable static fallback. When `prefers-reduced-motion` is enabled, automatic scene movement is disabled and the UI exposes a visible reduced-motion status.
+The canvas is marked as decorative because the DOM contains the profile content in headings, paragraphs, lists, and links. When WebGL is unavailable, Canvas initialization fails, or a `webglcontextlost` event occurs, the scene area renders a readable static fallback. When `prefers-reduced-motion` is enabled, automatic scene movement is disabled and the UI exposes a visible reduced-motion status. Drei text primitives are intentionally not used, so the scene has no external font/CDN dependency.
 
 ## Data Policy
 
@@ -21,4 +21,4 @@ Profile content is limited to public GitHub-visible information: F0gr1/Ishigami 
 
 ## Tradeoffs
 
-The migration avoids a larger routing or design-system setup so the project remains feasible in one pass. The current fallback checks runtime WebGL availability but does not attempt to recover from a WebGL context lost after scene initialization.
+The migration avoids a larger routing or design-system setup so the project remains feasible in one pass. Docker uses nginx for static hosting rather than adding an application server or database. The Three.js bundle remains part of the initial page; lazy-loading the scene is a future performance option.
