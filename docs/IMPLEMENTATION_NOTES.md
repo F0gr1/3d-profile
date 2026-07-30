@@ -14,8 +14,11 @@
 - `src/data/profile.ts` にプロフィール情報を集約しました。
 - `Profile3D.tsx` は表示と3Dシーンの責務に寄せました。
 - WebGLが使えない環境でも読めるfallbackを追加しました。
+- Canvas初期化エラーとWebGL context lossを検出してfallbackへ切り替えるようにしました。
 - `prefers-reduced-motion` を見て自動回転やアニメーションを止めるようにしました。
+- Dreiの3Dテキストを使わず、外部フォント/CDNに依存しない構成にしました。
 - Vitest + React Testing Libraryでユーザーに見える内容をテストするようにしました。
+- npm ci、npm audit、Docker multi-stage build、nginxのSPA fallback/health checkを追加しました。
 - OpenSpecで今回の変更理由、設計、受け入れ条件を残しました。
 
 ## なぜデータを `src/data/profile.ts` に分けたのか
@@ -37,13 +40,15 @@
 
 そのため、3Dシーンは `aria-hidden="true"` にして、意味のある情報はHTMLのheading、paragraph、list、linkで表示しています。
 
-これにより、以下の環境でも内容が伝わります。
+Canvasの初期化で例外が発生した場合や、表示後にWebGL context lossが起きた場合も、sceneをfallbackに切り替えます。これにより、以下の環境でも内容が伝わります。
 
 - WebGLが無効なブラウザ
 - jsdomのようなテスト環境
 - スクリーンリーダー
 - 低スペック端末
 - reduced motionを指定しているユーザー
+
+3D上のプロフィール文字列は外部フォント読み込みを避けるため描画していません。アイデンティティ、スキル名、プロジェクト名はDOM側が持ちます。
 
 ## reduced motion対応の考え方
 
@@ -71,11 +76,11 @@
 1. `src/data/profile.ts` に新しいプロジェクトやスキルを追加する。
 2. `Profile3D.tsx` の `ProfileScene` に3D表現を追加する。
 3. `App.test.tsx` に「ユーザーが見える内容」のテストを追加する。
-4. `npm run lint`、`npm run typecheck`、`npm run test:run`、`npm run build` を通す。
+4. `npm ci`、`npm run lint`、`npm run typecheck`、`npm run test:run`、`npm run build`、`npm audit` を通す。
 5. 変更が仕様として残るなら `openspec/changes/` に新しいchangeを追加する。
 
 ## 注意点
 
-Three.js系の依存はbundle sizeが大きくなりやすいです。今回もbuild時にchunk size warningが出ます。
+Three.js系の依存はbundle sizeが大きくなりやすいです。初期表示のJavaScriptを軽くするlazy loadingは将来の改善候補ですが、現状はシンプルな単一ページ構成を優先しています。
 
-次の改善では、3Dシーンをdynamic importして初期表示のJavaScriptを軽くするのが有効です。
+Docker runtimeはnginxの非rootユーザーで動作し、`/healthz`とSPA deep linkを提供します。

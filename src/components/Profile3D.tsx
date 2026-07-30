@@ -1,6 +1,6 @@
-import { Box, OrbitControls, Sphere, Text, Torus } from "@react-three/drei";
+import { Box, OrbitControls, Sphere, Torus } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useEffect, useRef, useState } from "react";
+import { Component, type ReactNode, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { profileData, type ProfileData, type ProfileSkill } from "../data/profile";
 
@@ -41,9 +41,12 @@ function getReducedMotionPreference() {
 }
 
 function useWebGLAvailability() {
-  const [isAvailable] = useState(canUseWebGL);
+  const [isAvailable, setIsAvailable] = useState(canUseWebGL);
 
-  return isAvailable;
+  return {
+    isAvailable,
+    markUnavailable: () => setIsAvailable(false),
+  };
 }
 
 function usePrefersReducedMotion() {
@@ -123,15 +126,6 @@ function SkillBox({
       <Box ref={meshRef} args={[0.78, 0.78, 0.78]} position={position}>
         <meshStandardMaterial color={skill.color} roughness={0.28} metalness={0.42} />
       </Box>
-      <Text
-        position={[position[0], position[1] - 0.78, position[2]]}
-        fontSize={0.24}
-        color="white"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {skill.name}
-      </Text>
     </group>
   );
 }
@@ -160,9 +154,11 @@ function DecorativeRing({ reducedMotion }: { reducedMotion: boolean }) {
 function ProfileScene({
   profile,
   reducedMotion,
+  onContextLost,
 }: {
   profile: ProfileData;
   reducedMotion: boolean;
+  onContextLost: () => void;
 }) {
   const sceneSkills = profile.skills.slice(0, skillPositions.length);
 
@@ -173,6 +169,14 @@ function ProfileScene({
       className="profile-canvas"
       dpr={[1, 1.6]}
       gl={{ antialias: true, alpha: true }}
+      onCreated={({ gl }) => {
+        const handleContextLost = (event: Event) => {
+          event.preventDefault();
+          onContextLost();
+        };
+
+        gl.domElement.addEventListener("webglcontextlost", handleContextLost, { once: true });
+      }}
     >
       <ambientLight intensity={0.7} />
       <directionalLight position={[3, 5, 4]} intensity={1.8} />
@@ -182,13 +186,6 @@ function ProfileScene({
       <group position={[0, -0.25, 0]}>
         <DecorativeRing reducedMotion={reducedMotion} />
         <Avatar reducedMotion={reducedMotion} />
-
-        <Text position={[0, 3.05, 0]} fontSize={0.58} color="#f8fafc" anchorX="center" anchorY="middle">
-          {profile.handle}
-        </Text>
-        <Text position={[0, 2.48, 0]} fontSize={0.22} color="#94a3b8" anchorX="center" anchorY="middle">
-          {profile.title}
-        </Text>
 
         {sceneSkills.map((skill, index) => (
           <SkillBox
@@ -213,6 +210,32 @@ function ProfileScene({
   );
 }
 
+type SceneErrorBoundaryProps = {
+  children: ReactNode;
+  onError: () => void;
+};
+
+type SceneErrorBoundaryState = {
+  hasError: boolean;
+};
+
+class SceneErrorBoundary extends Component<SceneErrorBoundaryProps, SceneErrorBoundaryState> {
+  state: SceneErrorBoundaryState = { hasError: false };
+
+  componentDidCatch() {
+    this.setState({ hasError: true });
+    this.props.onError();
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null;
+    }
+
+    return this.props.children;
+  }
+}
+
 function WebGLFallback({ profile }: { profile: ProfileData }) {
   return (
     <div className="scene-fallback" role="status">
@@ -233,7 +256,7 @@ function WebGLFallback({ profile }: { profile: ProfileData }) {
 }
 
 export default function Profile3D() {
-  const webGLAvailable = useWebGLAvailability();
+  const { isAvailable: webGLAvailable, markUnavailable } = useWebGLAvailability();
   const prefersReducedMotion = usePrefersReducedMotion();
 
   return (
@@ -243,7 +266,13 @@ export default function Profile3D() {
           <div className="scene-aurora scene-aurora--blue" aria-hidden="true" />
           <div className="scene-aurora scene-aurora--rose" aria-hidden="true" />
           {webGLAvailable ? (
-            <ProfileScene profile={profileData} reducedMotion={prefersReducedMotion} />
+            <SceneErrorBoundary onError={markUnavailable}>
+              <ProfileScene
+                onContextLost={markUnavailable}
+                profile={profileData}
+                reducedMotion={prefersReducedMotion}
+              />
+            </SceneErrorBoundary>
           ) : (
             <WebGLFallback profile={profileData} />
           )}

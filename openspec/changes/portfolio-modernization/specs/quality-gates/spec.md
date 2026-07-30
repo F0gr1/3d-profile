@@ -6,8 +6,8 @@ The project MUST provide explicit scripts for development, linting, type checkin
 
 #### Scenario: Maintainer validates the project locally
 
-- Given dependencies are installed
-- When the maintainer runs `npm run lint`, `npm run typecheck`, `npm run test:run`, and `npm run build`
+- Given dependencies are installed with `npm ci`
+- When the maintainer runs `npm run lint`, `npm run typecheck`, `npm run test:run`, `npm run build`, and `npm audit`
 - Then each command executes through the configured Vite/Vitest/TypeScript/ESLint toolchain
 
 ### Requirement: Portfolio Content Tests
